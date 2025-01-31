@@ -1,0 +1,25 @@
+<annotation>
+	<folder>my-project-name</folder>
+	<filename>capcha32.jpeg</filename>
+	<path>/my-project-name/capcha32.jpeg</path>
+	<source>
+		<database>Unspecified</database>
+	</source>
+	<size>
+		<width>589</width>
+		<height>1280</height>
+		<depth>3</depth>
+	</size>
+	<object>
+		<name>capcha_chest</name>
+		<pose>Unspecified</pose>
+		<truncated>0</truncated>
+		<difficult>0</difficult>
+		<bndbox>
+			<xmin>56</xmin>
+			<ymin>423</ymin>
+			<xmax>135</xmax>
+			<ymax>504</ymax>
+		</bndbox>
+	</object>
+</annotation>

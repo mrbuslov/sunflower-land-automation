@@ -1,0 +1,32 @@
+/* Target the page */
+.absolute.z-30.opacity-80 {
+    background-color: rgb(255, 255, 255) !important;
+    /* Change color */
+}
+
+
+.absolute.z-30.opacity-50 {
+    background-color: rgb(255, 255, 255) !important;
+    /* Change color */
+}
+
+.absolute1 {
+    background-color: rgb(255, 255, 255) !important;
+    /* Change color */
+}
+img.absolute.pointer-events-none[src*="crops/sunflower/plant.png"] {
+        width: 2px !important;   /* Set width to 2px */
+        height: 2px !important;  /* Set height to 2px */
+    }
+
+img.absolute.pointer-events-none[src*="game-assets/crops/"] {
+        width: 2px !important;   /* Set width to 2px */
+        height: 2px !important;  /* Set height to 2px */
+    }
+
+  img.absolute.w-16[src^="data:image/png"] {
+    transform: perspective(9cm) scale(0.946815) !important;
+  }
+  img.h-full.object-contain[src^="data:image/png"] {
+    transform: perspective(9cm) !important;
+  }
