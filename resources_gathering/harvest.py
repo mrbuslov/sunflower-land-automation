@@ -16,23 +16,31 @@ def harvest():
     time_for_harvesting = generate_time_for_planting()
     cached_key = generate_cached_key()
 
+    to_harvest = [
+        {
+            "type": "crop.harvested",
+            "index": hole_index,
+            "createdAt": time_for_harvesting,
+        }
+        for hole_index in resources_settings.LAND_HOLES
+        if not resources_settings.LAND_HOLES_AVAILABILITY[hole_index]
+    ]
     payload = {
         "sessionId": account_settings.SESSION_ID,
-        "actions": [
-            {
-                "type": "crop.harvested",
-                "index": hole_index,
-                "createdAt": time_for_harvesting,
-            }
-            for hole_index in resources_settings.LAND_HOLES
-            if resources_settings.LAND_HOLES_AVAILABILITY[hole_index]
-        ],
+        "actions": to_harvest,
         "clientVersion": account_settings.CLIENT_VERSION,
         "cachedKey": cached_key,
         "deviceTrackerId": account_settings.DEVICE_TRACKER_ID,
     }
     response = requests.post(ApiRouter.AUTOSAVE, headers=DEFAULT_HEADERS(), json=payload)
     print("Status code harvest:", response.status_code)
+
+    # set them as available
+    if response.status_code == 200:
+        for action in to_harvest:
+            resources_settings.LAND_HOLES_AVAILABILITY[action["index"]] = True
+    else:
+        print(response.text)
 
 
 if __name__ == "__main__":
