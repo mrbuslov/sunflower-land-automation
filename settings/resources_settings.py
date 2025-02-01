@@ -2,11 +2,15 @@ from settings.account_settings import AccountSettings
 
 
 class ResourcesSettings(AccountSettings):
-    LAND_HOLES: list[int] = []
-    TREES: list[int] = []
-    STONES: list[int] = []
-    IRON_STONES: list[int] = []
-    GOLD_STONES: list[int] = []
+    LAND_HOLES: list[str] = []
+    TREES: list[str] = []
+    STONES: list[str] = []
+    IRON_STONES: list[str] = []
+    GOLD_STONES: list[str] = []
+
+    LAND_HOLES_AVAILABILITY: dict[str, bool] = {}
+
+    CROPS_AMOUNT: dict[str, float] = {}
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -17,6 +21,27 @@ class ResourcesSettings(AccountSettings):
         self.STONES = list(session_data['farm']['stones'].keys())
         self.IRON_STONES = list(session_data['farm']['iron'].keys())
         self.GOLD_STONES = list(session_data['farm']['gold'].keys())
+
+        self.LAND_HOLES_AVAILABILITY = {
+            hole: not bool(session_data['farm']['crops'][hole].get('crop', False))
+            for hole in self.LAND_HOLES
+        }
+        self.CROPS_AMOUNT = {
+            key: float(value)
+            for key, value in session_data['farm']["inventory"].items()
+        }
+
+    def is_able_to_plant(self, amount: int) -> bool:
+        """Check if there are enough land holes to plant"""
+        if amount == -1:
+            return sum(self.LAND_HOLES_AVAILABILITY.values()) > 0
+        return sum(self.LAND_HOLES_AVAILABILITY.values()) >= amount
+
+    def is_crops_amount_sufficient(self, name: str, amount: int) -> bool:
+        """Check if crops amount is sufficient"""
+        if amount == -1:
+            return int(self.CROPS_AMOUNT[name]) > 0
+        return self.CROPS_AMOUNT[name] >= amount
 
 
 resources_settings = ResourcesSettings()

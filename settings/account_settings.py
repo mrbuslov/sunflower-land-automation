@@ -7,7 +7,7 @@ import requests
 from pydantic_settings import BaseSettings
 
 
-# TODO: regenerate device tracker id if expired (generate_device_tracker_id)
+_session_data = None
 class AccountSettings(BaseSettings):
     AUTH_TOKEN: str
     FARM_ID: str | None = None
@@ -19,22 +19,26 @@ class AccountSettings(BaseSettings):
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        session_file = self.get_session_file()
-
-        if not session_file.exists():
-            session_response = self._request_session()
-            session_file.write_text(json.dumps(session_response, indent=4), encoding="utf-8")
-
-        with session_file.open("r", encoding="utf-8") as f:
-            session_data = json.load(f)
+        session_data = self.get_session_data()
 
         self.ACCOUNT_ID = session_data['linkedWallet']
         self.FARM_ID = session_data['farmId']
         self.SESSION_ID = session_data['sessionId']
         self.DEVICE_TRACKER_ID = session_data['deviceTrackerId']
 
+    def get_session_data(self) -> dict:
+        global _session_data
+        if _session_data is None:
+            session_file = self.get_session_file()
+
+            # write session file every time we run the script
+            session_response = self._request_session()
+            _session_data = session_response
+            session_file.write_text(json.dumps(session_response, indent=4), encoding="utf-8")
+        return _session_data
+
     def _request_session(self) -> dict:
-        return requests.post(
+        response = requests.post(
             "https://api.sunflower-land.com/session",
             json={"clientVersion": self.CLIENT_VERSION},
             headers={
@@ -43,7 +47,22 @@ class AccountSettings(BaseSettings):
                 "X-Fingerprint": "X",
                 "X-Transaction-ID": self.generate_random_id_for_session(),
             }
-        ).json()
+        )
+
+        if response.status_code == 503:
+            # Handle server maintenance or throttling
+            data = response.json()
+            if data.get("message") == "Temporary maintenance":
+                raise Exception("Server is under maintenance.")
+            raise Exception("Session server error.")
+        elif response.status_code == 429:
+            raise Exception("Too many requests. Try again later.")
+        elif response.status_code == 401:
+            raise Exception("Session expired. Please log in again.")
+        elif response.status_code >= 400:
+            raise Exception(f"Session error: {response.status_code} - {response.text}")
+
+        return response.json()
 
     @staticmethod
     def generate_random_id_for_session():

@@ -12,7 +12,7 @@ pip install -r requirements.txt
 
 ## Planting
 ```
-PYTHONPATH=. python resources_gathering/plant.py
+PYTHONPATH=. python resources_gathering/plant.py "Sunflower Seed" 10
 ```
 
 ## Harvesting

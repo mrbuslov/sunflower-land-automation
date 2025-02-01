@@ -1,3 +1,4 @@
+import argparse
 import base64
 import json
 import random
@@ -6,59 +7,6 @@ import uuid
 from datetime import datetime, timedelta
 
 import pytz
-import requests
-
-from settings.account_settings import account_settings
-from utils.consts import (
-    API_URL,
-)
-
-
-def generate_device_tracker_id():
-    """Generate a unique deviceTrackerId."""
-
-    def load_session(token, transaction_id, retries=0):
-        headers = {
-            "Authorization": f"Bearer {token}",
-            "X-Transaction-ID": transaction_id,
-            "Content-Type": "application/json;charset=UTF-8",
-            "Accept": "application/json",
-        }
-
-        payload = {
-            "clientVersion": account_settings.CLIENT_VERSION,
-        }
-
-        response = requests.post(f"{API_URL}/session", json=payload, headers=headers)
-
-        if response.status_code == 503:
-            # Handle server maintenance or throttling
-            data = response.json()
-            if data.get("message") == "Temporary maintenance":
-                raise Exception("Server is under maintenance.")
-
-            backoff = min(1000 * (2 ** retries), 10000)  # Exponential backoff
-            jitter = random.uniform(0, 1000)
-            time.sleep((backoff + jitter) / 1000)
-
-            if retries < 3:
-                return load_session(token, transaction_id, retries + 1)
-
-            raise Exception("Session server error after retries.")
-
-        if response.status_code == 429:
-            raise Exception("Too many requests. Try again later.")
-
-        if response.status_code == 401:
-            raise Exception("Session expired. Please log in again.")
-
-        if response.status_code >= 400:
-            raise Exception(f"Session error: {response.status_code} - {response.text}")
-
-        data = response.json()
-        return data.get("deviceTrackerId")
-
-    return load_session(account_settings.AUTH_TOKEN, account_settings.TRANSACTION_ID)
 
 
 def generate_time_for_planting():
@@ -87,3 +35,22 @@ def generate_cached_key():
     }
     cache_key = base64.b64encode(json.dumps(farm_session).encode()).decode()
     return cache_key
+
+
+def arg_parser_plant():
+    parser = argparse.ArgumentParser(description="Harvest resources")
+    parser.add_argument(
+        "name",
+        type=str,
+        nargs="?",
+        default="Sunflower Seed",
+        help="Name of resource to plant. Listed in utils/plants_schemas.py"
+    )
+    parser.add_argument(
+        "amount",
+        type=int,
+        nargs="?",
+        default=-1,
+        help="Amount of resource to plant. -1 for all"
+    )
+    return parser.parse_args()
