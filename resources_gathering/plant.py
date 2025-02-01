@@ -18,15 +18,18 @@ def plant(
     amount: int = -1
 ):
     print('Starting planting...')
+
+    time_for_planting = generate_time_for_planting()
+    cached_key = generate_cached_key()
     if not resources_settings.is_able_to_plant(amount):
         print(f"Not enough land holes to plant {amount} {name}. Available: {sum(resources_settings.LAND_HOLES_AVAILABILITY.values())}")
         return
     elif not resources_settings.is_crops_amount_sufficient(name, amount):
         print(f"Not enough {name} to plant {amount}. Available: {resources_settings.CROPS_AMOUNT[name]}")
         return
-
-    time_for_planting = generate_time_for_planting()
-    cached_key = generate_cached_key()
+    elif not resources_settings.is_planting_time_valid(time_for_planting):
+        print(f"Invalid planting time: {time_for_planting}")
+        return
 
     to_plant = [
         {

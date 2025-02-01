@@ -5,15 +5,14 @@ import random
 import time
 import uuid
 from datetime import datetime, timedelta
+from typing import Literal
 
-import pytz
 
-
-def generate_time_for_planting():
+def generate_time_for_planting(action: Literal['add', 'sub'] = 'add'):
     def get_time(milliseconds_delta=0):
-        kyiv_tz = pytz.timezone("Europe/Kyiv")
-        kyiv_time = datetime.now(kyiv_tz) + timedelta(milliseconds=milliseconds_delta)
-        utc_time = kyiv_time.astimezone(pytz.utc)
+        if action == 'sub':
+            milliseconds_delta = -milliseconds_delta
+        utc_time = datetime.utcnow() + timedelta(milliseconds=milliseconds_delta)
         return utc_time.strftime("%Y-%m-%dT%H:%M:%S.%f")[:-3] + "Z"
 
     random_milliseconds = random.randint(0, 10000)
@@ -54,3 +53,6 @@ def arg_parser_plant():
         help="Amount of resource to plant. -1 for all"
     )
     return parser.parse_args()
+
+
+print(generate_time_for_planting())

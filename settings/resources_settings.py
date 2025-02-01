@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from settings.account_settings import AccountSettings
 
 
@@ -42,6 +44,13 @@ class ResourcesSettings(AccountSettings):
         if amount == -1:
             return int(self.CROPS_AMOUNT[name]) > 0
         return self.CROPS_AMOUNT[name] >= amount
+
+    def is_planting_time_valid(self, planting_time: str) -> bool:
+        """Check if planting time is valid"""
+        logged_in_at = self.get_session_data()['startedAt']
+        time1_dt = datetime.fromisoformat(logged_in_at.rstrip("Z"))
+        time2_dt = datetime.fromisoformat(planting_time.rstrip("Z"))
+        return time1_dt < time2_dt
 
 
 resources_settings = ResourcesSettings()

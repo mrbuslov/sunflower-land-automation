@@ -1,15 +1,18 @@
 import json
 import random
 import string
+import time
 from pathlib import Path
 
 import requests
 from pydantic_settings import BaseSettings
 
-
 _session_data = None
+
+
 class AccountSettings(BaseSettings):
     AUTH_TOKEN: str
+    SHOULD_REFRESH_SESSION: bool = True
     FARM_ID: str | None = None
     CLIENT_VERSION: str = "2025-01-31T05:13"
     ACCOUNT_ID: str | None = None
@@ -20,6 +23,7 @@ class AccountSettings(BaseSettings):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         session_data = self.get_session_data()
+        time.sleep(16)
 
         self.ACCOUNT_ID = session_data['linkedWallet']
         self.FARM_ID = session_data['farmId']
@@ -29,12 +33,15 @@ class AccountSettings(BaseSettings):
     def get_session_data(self) -> dict:
         global _session_data
         if _session_data is None:
-            session_file = self.get_session_file()
+            if self.SHOULD_REFRESH_SESSION:
+                session_file = self.get_session_file()
 
-            # write session file every time we run the script
-            session_response = self._request_session()
-            _session_data = session_response
-            session_file.write_text(json.dumps(session_response, indent=4), encoding="utf-8")
+                # write session file every time we run the script
+                session_response = self._request_session()
+                _session_data = session_response
+                session_file.write_text(json.dumps(session_response, indent=4), encoding="utf-8")
+            else:
+                _session_data = self.get_session_file_data()
         return _session_data
 
     def _request_session(self) -> dict:
