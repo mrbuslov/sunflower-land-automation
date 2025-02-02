@@ -1,3 +1,5 @@
+from datetime import timedelta
+
 import requests
 
 from settings.account_settings import account_settings
@@ -7,28 +9,30 @@ from utils.consts import (
 )
 from utils.schemas import ApiRouter
 from utils.utils import (
-    generate_time_for_planting,
+    generate_time_for_gathering_operation,
     generate_unique_crop_id,
-    generate_cached_key, arg_parser_plant,
+    generate_cached_key, arg_parser_plant, set_new_hole_last_planted_at,
+    calculate_planting_time, split_payloads_by_created_at,
 )
 
 
 def plant(
-    name: str = None,
-    amount: int = -1
+        name: str = None,
+        amount: int = -1
 ):
-    print('Starting planting...')
+    """
+    Plants seeds in free land holes.
+    If amount is -1, all seeds will be planted.
+    NOTE: it plants seeds in past, so it can be easy to harvest
+    """
+    print(f'Starting planting {amount}/{resources_settings.CROPS_AMOUNT[name]} {name}...')
 
-    time_for_planting = generate_time_for_planting()
     cached_key = generate_cached_key()
     if not resources_settings.is_able_to_plant(amount):
         print(f"Not enough land holes to plant {amount} {name}. Available: {sum(resources_settings.LAND_HOLES_AVAILABILITY.values())}")
         return
     elif not resources_settings.is_crops_amount_sufficient(name, amount):
         print(f"Not enough {name} to plant {amount}. Available: {resources_settings.CROPS_AMOUNT[name]}")
-        return
-    elif not resources_settings.is_planting_time_valid(time_for_planting):
-        print(f"Invalid planting time: {time_for_planting}")
         return
 
     to_plant = [
@@ -37,12 +41,13 @@ def plant(
             "index": hole_index,
             "item": name,
             "cropId": generate_unique_crop_id(),
-            "createdAt": time_for_planting,
+            "createdAt": generate_time_for_gathering_operation(start_time=None),  # calculate_planting_time(hole_index)
         }
         for hole_index in resources_settings.LAND_HOLES
         if resources_settings.LAND_HOLES_AVAILABILITY[hole_index]
     ]
     to_plant = to_plant[:amount] if amount != -1 else to_plant
+    print('to_plant', to_plant)
     payload = {
         "sessionId": account_settings.SESSION_ID,
         "actions": to_plant,
@@ -50,15 +55,20 @@ def plant(
         "cachedKey": cached_key,
         "deviceTrackerId": account_settings.DEVICE_TRACKER_ID,
     }
-    response = requests.post(ApiRouter.AUTOSAVE, headers=DEFAULT_HEADERS(), json=payload)
-    print("Status code plant:", response.status_code)
+    for request_payload in split_payloads_by_created_at(payload):
+        response = requests.post(ApiRouter.AUTOSAVE, headers=DEFAULT_HEADERS(), json=request_payload)
+        print("Status code plant:", response.status_code)
 
-    # set them as unavailable
-    if response.status_code == 200:
-        for action in to_plant:
-            resources_settings.LAND_HOLES_AVAILABILITY[action["index"]] = False
-    else:
-        print(response.text)
+        # set them as unavailable
+        if response.status_code == 200:
+            for action in to_plant:
+                resources_settings.LAND_HOLES_AVAILABILITY[action["index"]] = False
+        else:
+            print(response.text)
+            return
+
+    for plant_operation in to_plant:
+        set_new_hole_last_planted_at(plant_operation["index"], plant_operation["createdAt"])
 
 
 if __name__ == "__main__":

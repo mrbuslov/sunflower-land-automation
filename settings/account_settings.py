@@ -2,6 +2,7 @@ import json
 import random
 import string
 import time
+from datetime import datetime
 from pathlib import Path
 
 import requests
@@ -19,24 +20,27 @@ class AccountSettings(BaseSettings):
     SESSION_ID: str | None = None
     TRANSACTION_ID: str = "undefined"
     DEVICE_TRACKER_ID: str | None = None
+    LOGGED_IN_AT: datetime | None = None
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         session_data = self.get_session_data()
-        time.sleep(16)
 
         self.ACCOUNT_ID = session_data['linkedWallet']
         self.FARM_ID = session_data['farmId']
         self.SESSION_ID = session_data['sessionId']
         self.DEVICE_TRACKER_ID = session_data['deviceTrackerId']
+        self.LOGGED_IN_AT = datetime.fromisoformat(session_data['startedAt'].rstrip("Z"))
 
-    def get_session_data(self) -> dict:
+    def get_session_data(self, force_update_session: bool = False) -> dict:
         global _session_data
-        if _session_data is None:
-            if self.SHOULD_REFRESH_SESSION:
-                session_file = self.get_session_file()
+        if _session_data is None or force_update_session is True:
+            session_file = self.get_session_file()
+            session_file_exists = False
+            if session_file.exists():
+                session_file_exists = True
 
-                # write session file every time we run the script
+            if force_update_session is True or self.SHOULD_REFRESH_SESSION or not session_file_exists:
                 session_response = self._request_session()
                 _session_data = session_response
                 session_file.write_text(json.dumps(session_response, indent=4), encoding="utf-8")
@@ -94,6 +98,8 @@ class AccountSettings(BaseSettings):
 
     class Config:
         env_file = ".env"
+        frozen = False
+        populate_by_name = True
 
 
 account_settings = AccountSettings()
