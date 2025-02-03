@@ -68,6 +68,7 @@ def plant(
 
     for plant_operation in to_plant:
         set_new_hole_last_planted_at(plant_operation["index"], plant_operation["createdAt"])
+    resources_settings.CROPS_AMOUNT[name] -= len(to_plant)
 
 
 if __name__ == "__main__":

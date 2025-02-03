@@ -5,7 +5,7 @@ from resources_gathering.harvest import harvest
 from resources_gathering.plant import plant
 from settings.resources_settings import resources_settings
 from utils.plants_schemas import PLANTS_DATA
-from utils.utils import divide_items_to_chunks, arg_parser_harvest
+from utils.utils import divide_items_to_chunks
 
 
 def plant_n_harvest(crop_name: str):
@@ -13,6 +13,10 @@ def plant_n_harvest(crop_name: str):
     Plants seeds and harvests them.
     LEAVE THIS SCRIPT RUNNING IN THE BACKGROUND (NIGHT)
     """
+    if crop_name not in resources_settings.CROPS_AMOUNT:
+        print(f'ERROR: Crop {crop_name} not found in available plants')
+        return
+
     print(f'Planting {resources_settings.CROPS_AMOUNT[crop_name]} {crop_name}')
     # divide by holes amount
     chunks_list = divide_items_to_chunks(
@@ -40,6 +44,8 @@ def plant_n_harvest(crop_name: str):
 if __name__ == '__main__':
     PLANTS_CULTURES_SEEDS_TO_PLANT = [
         "Sunflower Seed",
+        "Rhubarb Seed",
+        "Carrot Seed",
         # "Potato Seed",
         # "Pumpkin Seed",
     ]
