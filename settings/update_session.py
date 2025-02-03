@@ -2,7 +2,7 @@ from settings.account_settings import account_settings
 
 
 def update_session_file() -> None:
-    account_settings.get_session_data(force_update_session=True)
+    account_settings.update_session_data()
 
 
 if __name__ == "__main__":

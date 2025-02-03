@@ -7,6 +7,7 @@ from settings.resources_settings import resources_settings
 from utils.consts import (
     DEFAULT_HEADERS,
 )
+from utils.decorators import handle_gathering_errors
 from utils.schemas import ApiRouter
 from utils.utils import (
     generate_time_for_gathering_operation,
@@ -16,6 +17,7 @@ from utils.utils import (
 )
 
 
+@handle_gathering_errors
 def plant(
         name: str = None,
         amount: int = -1
@@ -47,6 +49,7 @@ def plant(
         if resources_settings.LAND_HOLES_AVAILABILITY[hole_index]
     ]
     to_plant = to_plant[:amount] if amount != -1 else to_plant
+    to_plant = to_plant[:resources_settings.CROPS_AMOUNT[name]]
     payload = {
         "sessionId": account_settings.SESSION_ID,
         "actions": to_plant,
@@ -63,8 +66,7 @@ def plant(
             for action in to_plant:
                 resources_settings.LAND_HOLES_AVAILABILITY[action["index"]] = False
         else:
-            print(response.text)
-            return
+            response.raise_for_status()
 
     for plant_operation in to_plant:
         set_new_hole_last_planted_at(plant_operation["index"], plant_operation["createdAt"])

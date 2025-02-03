@@ -1,17 +1,20 @@
 import requests
+
+from settings.account_settings import account_settings
+from settings.resources_settings import resources_settings
 from utils.consts import (
     DEFAULT_HEADERS,
 )
-from settings.account_settings import account_settings
-from settings.resources_settings import resources_settings
+from utils.decorators import handle_gathering_errors
 from utils.schemas import ApiRouter
 from utils.utils import (
     generate_time_for_gathering_operation,
-    generate_cached_key, calculate_gathering_time, set_new_hole_last_harvested_at, arg_parser_harvest,
+    generate_cached_key, set_new_hole_last_harvested_at, arg_parser_harvest,
     split_payloads_by_created_at,
 )
 
 
+@handle_gathering_errors
 def harvest(crop_name: str = None):
     """
     Harvests all crops in land holes.
@@ -34,6 +37,8 @@ def harvest(crop_name: str = None):
     if not to_harvest:
         print('Nothing to harvest')
         return
+    if crop_name is not None:
+        to_harvest = to_harvest[:resources_settings.CROPS_AMOUNT[crop_name]]
 
     payload = {
         "sessionId": account_settings.SESSION_ID,
