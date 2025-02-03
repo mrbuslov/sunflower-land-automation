@@ -12,7 +12,7 @@ from utils.utils import (
     generate_time_for_gathering_operation,
     generate_unique_crop_id,
     generate_cached_key, arg_parser_plant, set_new_hole_last_planted_at,
-    calculate_planting_time, split_payloads_by_created_at,
+    split_payloads_by_created_at,
 )
 
 
@@ -47,7 +47,6 @@ def plant(
         if resources_settings.LAND_HOLES_AVAILABILITY[hole_index]
     ]
     to_plant = to_plant[:amount] if amount != -1 else to_plant
-    print('to_plant', to_plant)
     payload = {
         "sessionId": account_settings.SESSION_ID,
         "actions": to_plant,

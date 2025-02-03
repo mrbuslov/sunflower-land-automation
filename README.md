@@ -25,10 +25,15 @@ OR
 PYTHONPATH=. python resources_gathering/harvest.py "Sunflower Seed"
 ```
 
+## Automatic planting n harvesting
+```
+PYTHONPATH=. python scripts/plant_n_harvest.py
+```
+
 # Useful commands
 
 ## Update `session.json` file
-Note: if you have
+Note: if you have `SHOULD_REFRESH_SESSION=False`, use this to update session file:
 ```
 PYTHONPATH=. python settings/update_session.py
 ```
