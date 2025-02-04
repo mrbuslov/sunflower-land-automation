@@ -41,7 +41,6 @@ async def gather_all():
                 await asyncio.sleep(resources_settings.RESOURCES_WAITING_TIME['stone'])
             else:
                 print('Not enough pickaxes, waiting for you to buy (7 mins)...')
-
                 # give time to buy pickaxe
                 await asyncio.sleep(60 * 7)
                 resources_settings.update_session_data()
