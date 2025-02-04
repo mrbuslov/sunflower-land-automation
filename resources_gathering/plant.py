@@ -1,3 +1,4 @@
+import asyncio
 from datetime import timedelta
 
 import requests
@@ -18,7 +19,7 @@ from utils.utils import (
 
 
 @handle_gathering_errors
-def plant(
+async def plant(
         name: str = None,
         amount: int = -1
 ):
@@ -27,8 +28,6 @@ def plant(
     If amount is -1, all seeds will be planted.
     NOTE: it plants seeds in past, so it can be easy to harvest
     """
-    print(f'Starting planting {amount}/{resources_settings.CROPS_AMOUNT[name]} {name}...')
-
     cached_key = generate_cached_key()
     if not resources_settings.is_able_to_plant(amount):
         print(f"Not enough land holes to plant {amount} {name}. Available: {sum(resources_settings.LAND_HOLES_AVAILABILITY.values())}")
@@ -57,16 +56,17 @@ def plant(
         "cachedKey": cached_key,
         "deviceTrackerId": account_settings.DEVICE_TRACKER_ID,
     }
+
+    print(f'Starting planting {len(to_plant)}/{resources_settings.CROPS_AMOUNT[name]} {name}...')
     for request_payload in split_payloads_by_created_at(payload):
         response = requests.post(ApiRouter.AUTOSAVE, headers=DEFAULT_HEADERS(), json=request_payload)
         print("Status code plant:", response.status_code)
+        response.raise_for_status()
 
         # set them as unavailable
         if response.status_code == 200:
             for action in to_plant:
                 resources_settings.LAND_HOLES_AVAILABILITY[action["index"]] = False
-        else:
-            response.raise_for_status()
 
     for plant_operation in to_plant:
         set_new_hole_last_planted_at(plant_operation["index"], plant_operation["createdAt"])
@@ -75,4 +75,4 @@ def plant(
 
 if __name__ == "__main__":
     args = arg_parser_plant()
-    plant(args.name, args.amount)
+    asyncio.run(plant(args.name, args.amount))

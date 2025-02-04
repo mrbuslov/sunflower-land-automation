@@ -1,3 +1,5 @@
+import asyncio
+
 import requests
 
 from settings.account_settings import account_settings
@@ -15,12 +17,11 @@ from utils.utils import (
 
 
 @handle_gathering_errors
-def harvest(crop_name: str = None):
+async def harvest(crop_name: str = None):
     """
     Harvests all crops in land holes.
     If crop_name is specified, the harvesting time will be calculated (so you can plant and harvest again)
     """
-    print('Starting harvesting  ...')
     cached_key = generate_cached_key()
 
     to_harvest = [
@@ -37,8 +38,6 @@ def harvest(crop_name: str = None):
     if not to_harvest:
         print('Nothing to harvest')
         return
-    if crop_name is not None:
-        to_harvest = to_harvest[:resources_settings.CROPS_AMOUNT[crop_name]]
 
     payload = {
         "sessionId": account_settings.SESSION_ID,
@@ -47,17 +46,17 @@ def harvest(crop_name: str = None):
         "cachedKey": cached_key,
         "deviceTrackerId": account_settings.DEVICE_TRACKER_ID,
     }
+
+    print('Starting harvesting...')
     for request_payload in split_payloads_by_created_at(payload):
         response = requests.post(ApiRouter.AUTOSAVE, headers=DEFAULT_HEADERS(), json=request_payload)
         print("Status code harvest:", response.status_code)
+        response.raise_for_status()
 
         # set them as available
         if response.status_code == 200:
             for action in to_harvest:
                 resources_settings.LAND_HOLES_AVAILABILITY[action["index"]] = True
-        else:
-            print(response.text)
-            return
 
     for harvest_operation in to_harvest:
         set_new_hole_last_harvested_at(harvest_operation["index"], harvest_operation["createdAt"])
@@ -65,4 +64,4 @@ def harvest(crop_name: str = None):
 
 if __name__ == "__main__":
     args = arg_parser_harvest()
-    harvest(args.name)
+    asyncio.run(harvest(args.name))

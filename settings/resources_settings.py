@@ -1,5 +1,5 @@
 import json
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Literal
 
@@ -9,33 +9,33 @@ from utils.plants_schemas import PLANTS_DATA
 
 class ResourcesSettings(AccountSettings):
     LAND_HOLES: list[str] = []
-    LAND_HOLES_AVAILABILITY: dict[str, bool] = {}
-    OPERATIONS_INFO: dict[Literal['holes'], dict] = {}
-
     TREES: list[str] = []
     STONES: list[str] = []
     IRON_STONES: list[str] = []
     GOLD_STONES: list[str] = []
-
-    CROPS_AMOUNT: dict[str, float] = {}
-
-    OPERATIONS_CONFIG_DIR: Path | None = None
-    OPERATIONS_CONFIG_FILE: Path | None = None
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         session_data = self.get_session_file_data()
         self.OPERATIONS_CONFIG_DIR = Path("config")
         self.OPERATIONS_CONFIG_FILE = self.OPERATIONS_CONFIG_DIR / "crops_operations.json"
+        self.OPERATIONS_INFO = self.get_holes_operations_data()
 
         self.LAND_HOLES = list(session_data['farm']['crops'].keys())
         self.LAND_HOLES_AVAILABILITY = {
             hole: not bool(session_data['farm']['crops'][hole].get('crop', False))
             for hole in self.LAND_HOLES
         }
-        self.OPERATIONS_INFO = self.get_holes_operations_data()
 
         self.TREES = list(session_data['farm']['trees'].keys())
+        self.TREES_DATA: dict[str, dict[str, datetime]] = {
+            key: {
+                "chopped_at": self.from_timestamp(value['wood']["choppedAt"]),
+                "next_chop_time": self.from_timestamp(value['wood']["choppedAt"]) + timedelta(hours=2),
+            }
+            for key, value in session_data['farm']['trees'].items()
+        }
+
         self.STONES = list(session_data['farm']['stones'].keys())
         self.IRON_STONES = list(session_data['farm']['iron'].keys())
         self.GOLD_STONES = list(session_data['farm']['gold'].keys())
@@ -44,6 +44,23 @@ class ResourcesSettings(AccountSettings):
             key: int(float(value))
             for key, value in session_data['farm']["inventory"].items()
             if key in PLANTS_DATA
+        }
+        self.TOOLS_AMOUNT: dict[str, int] = {
+            "Axe": (
+                int(session_data['farm']['inventory']['Axe'])
+                if session_data['farm']['inventory'].get('Axe')
+                else 0
+            ),
+            "Pickaxe": (
+                int(session_data['farm']['inventory']['Pickaxe'])
+                if session_data['farm']['inventory'].get('Pickaxe')
+                else 0
+            ),
+        }
+
+        self.RESOURCES_WAITING_TIME = {
+            "tree": 60 * 60 * 2,
+            "stone": 60 * 60 * 4,
         }
 
     def is_able_to_plant(self, amount: int) -> bool:
@@ -69,8 +86,14 @@ class ResourcesSettings(AccountSettings):
         data = self._get_crops_operations()['land_holes']
         data = {
             key: {
-                "planted_at": datetime.fromisoformat(value_dict['planted_at']) if isinstance(value_dict['planted_at'], str) else value_dict['planted_at'],
-                "harvested_at": datetime.fromisoformat(value_dict['harvested_at']) if isinstance(value_dict['harvested_at'], str) else value_dict['harvested_at']
+                "planted_at": (
+                    datetime.fromisoformat(value_dict['planted_at'])
+                    if isinstance(value_dict['planted_at'], str) else value_dict['planted_at']
+                ),
+                "harvested_at": (
+                    datetime.fromisoformat(value_dict['harvested_at'])
+                    if isinstance(value_dict['harvested_at'], str) else value_dict['harvested_at']
+                )
             }
             for key, value_dict in data.items()
         }
@@ -103,6 +126,9 @@ class ResourcesSettings(AccountSettings):
         data['land_holes'] = holes_data
         with open(self.OPERATIONS_CONFIG_FILE, "w", encoding="utf-8") as f:
             json.dump(data, f, indent=4)
+
+    def from_timestamp(self, timestamp: int) -> datetime:
+        return datetime.fromtimestamp(timestamp / 1000, tz=timezone.utc)
 
     def _set_holes_default_operation_data(self):
         """Creates or updates the JSON config file with the current timestamp."""

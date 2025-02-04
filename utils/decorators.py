@@ -7,9 +7,9 @@ from settings.account_settings import account_settings
 
 def handle_gathering_errors(func):
     @functools.wraps(func)
-    def wrapper(*args, **kwargs):
+    async def wrapper(*args, **kwargs):
         try:
-            return func(*args, **kwargs)
+            return await func(*args, **kwargs)
         except requests.exceptions.RequestException as e:
             print('---------- ERROR ----------')
             print('ERROR: ', e.response)
@@ -21,7 +21,7 @@ def handle_gathering_errors(func):
                         print('Requesting session file to continue gathering...')
                         # request session file
                         account_settings.update_session_data()
-                        return func(*args, **kwargs)
+                        return await func(*args, **kwargs)
                 except ValueError:
                     pass  # Response was not in JSON format
     return wrapper

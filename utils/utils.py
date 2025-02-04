@@ -2,7 +2,6 @@ import argparse
 import base64
 import json
 import random
-import time
 import uuid
 from collections import defaultdict
 from datetime import datetime, timedelta
@@ -43,7 +42,7 @@ def generate_cached_key():
 
 
 def arg_parser_plant():
-    parser = argparse.ArgumentParser(description="Harvest resources")
+    parser = argparse.ArgumentParser(description="Plant resources")
     parser.add_argument(
         "name",
         type=str,
@@ -71,6 +70,19 @@ def arg_parser_harvest():
         help="Name of resource to plant. Listed in utils/plants_schemas.py"
     )
     return parser.parse_args()
+
+
+def arg_parser_resources():
+    parser = argparse.ArgumentParser(description="Gather resources")
+    parser.add_argument(
+        "amount",
+        type=int,
+        nargs="?",
+        default=-1,
+        help="Amount of resource to plant. -1 for all"
+    )
+    return parser.parse_args()
+
 
 
 def divide_items_to_chunks(total: int, chunk: int) -> list[int]:
@@ -136,3 +148,4 @@ def split_payloads_by_created_at(payload: dict[str, Any]) -> list[dict[str, Any]
         })
 
     return split_payloads
+

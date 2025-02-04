@@ -1,11 +1,13 @@
 # WIP (work in progress)
+import asyncio
+
 from resources_gathering.harvest import harvest
 from resources_gathering.plant import plant
 from settings.resources_settings import resources_settings
 from utils.utils import divide_items_to_chunks, arg_parser_harvest
 
 
-def plant_n_harvest(crop_name: str):
+async def in_past_plant_n_harvest(crop_name: str):
     """
     Plants seeds and harvests them immediately.
     NOTE: it plants seeds in past, so it can be easy to harvest. WORKS ONLY FOR THE PERIOD THAT SEEDS WERE NOT PLANTED
@@ -25,12 +27,12 @@ def plant_n_harvest(crop_name: str):
     # for chunk in chunks_list:
     chunk = 10
     print(f'Planting {chunk} {crop_name}')
-    plant(crop_name, chunk)
+    await plant(crop_name, chunk)
     print(f'Harvesting {chunk} {crop_name}')
-    harvest(crop_name)
+    await harvest(crop_name)
     print('-' * 80)
 
 
 if __name__ == '__main__':
     args = arg_parser_harvest()
-    plant_n_harvest(args.name)
+    asyncio.run(in_past_plant_n_harvest(args.name))

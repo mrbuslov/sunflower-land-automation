@@ -10,6 +10,11 @@ PYENV_VERSION=3.11.6 python -m venv venv
 pip install -r requirements.txt
 ```
 
+## Gather everything
+```
+PYTHONPATH=. python scripts/gather_all.py
+```
+
 ## Planting
 All available crops are listed in `utils/plants_schemas.py`
 ```
@@ -30,6 +35,12 @@ PYTHONPATH=. python resources_gathering/harvest.py "Sunflower Seed"
 PYTHONPATH=. python scripts/plant_n_harvest.py
 ```
 
+## Cutting down trees
+```
+PYTHONPATH=. python resources_gathering/trees_cut.py
+```
+
+
 # Useful commands
 
 ## Update `session.json` file
@@ -37,6 +48,9 @@ Note: if you have `SHOULD_REFRESH_SESSION=False`, use this to update session fil
 ```
 PYTHONPATH=. python settings/update_session.py
 ```
+
+# TODO:
+- replace requests with httpx
 
 # WIP (work in progress)
 All information below is in progress
