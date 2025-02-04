@@ -21,6 +21,11 @@ class ResourcesSettings(AccountSettings):
         self.OPERATIONS_CONFIG_FILE = self.OPERATIONS_CONFIG_DIR / "crops_operations.json"
         self.OPERATIONS_INFO = self.get_holes_operations_data()
 
+        self.RESOURCES_WAITING_TIME = {
+            "tree": 60 * 60 * 2,
+            "stone": 60 * 60 * 4,
+        }
+
         self.LAND_HOLES = list(session_data['farm']['crops'].keys())
         self.LAND_HOLES_AVAILABILITY = {
             hole: not bool(session_data['farm']['crops'][hole].get('crop', False))
@@ -31,12 +36,20 @@ class ResourcesSettings(AccountSettings):
         self.TREES_DATA: dict[str, dict[str, datetime]] = {
             key: {
                 "chopped_at": self.from_timestamp(value['wood']["choppedAt"]),
-                "next_chop_time": self.from_timestamp(value['wood']["choppedAt"]) + timedelta(hours=2),
+                "next_chop_time": self.from_timestamp(value['wood']["choppedAt"]) + timedelta(hours=self.RESOURCES_WAITING_TIME["tree"]),
             }
             for key, value in session_data['farm']['trees'].items()
         }
 
         self.STONES = list(session_data['farm']['stones'].keys())
+        self.STONES_DATA: dict[str, dict[str, datetime]] = {
+            key: {
+                "mined_at": self.from_timestamp(value['stone']["minedAt"]),
+                "next_mine_time": self.from_timestamp(value['stone']["minedAt"]) + timedelta(hours=self.RESOURCES_WAITING_TIME["stone"]),
+            }
+            for key, value in session_data['farm']['stones'].items()
+        }
+
         self.IRON_STONES = list(session_data['farm']['iron'].keys())
         self.GOLD_STONES = list(session_data['farm']['gold'].keys())
 
@@ -56,11 +69,6 @@ class ResourcesSettings(AccountSettings):
                 if session_data['farm']['inventory'].get('Pickaxe')
                 else 0
             ),
-        }
-
-        self.RESOURCES_WAITING_TIME = {
-            "tree": 60 * 60 * 2,
-            "stone": 60 * 60 * 4,
         }
 
     def is_able_to_plant(self, amount: int) -> bool:
