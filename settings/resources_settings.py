@@ -36,7 +36,7 @@ class ResourcesSettings(AccountSettings):
         self.TREES_DATA: dict[str, dict[str, datetime]] = {
             key: {
                 "chopped_at": self.from_timestamp(value['wood']["choppedAt"]),
-                "next_chop_time": self.from_timestamp(value['wood']["choppedAt"]) + timedelta(hours=self.RESOURCES_WAITING_TIME["tree"]),
+                "next_chop_time": self.from_timestamp(value['wood']["choppedAt"]) + timedelta(seconds=self.RESOURCES_WAITING_TIME["tree"]),
             }
             for key, value in session_data['farm']['trees'].items()
         }
@@ -45,7 +45,7 @@ class ResourcesSettings(AccountSettings):
         self.STONES_DATA: dict[str, dict[str, datetime]] = {
             key: {
                 "mined_at": self.from_timestamp(value['stone']["minedAt"]),
-                "next_mine_time": self.from_timestamp(value['stone']["minedAt"]) + timedelta(hours=self.RESOURCES_WAITING_TIME["stone"]),
+                "next_mine_time": self.from_timestamp(value['stone']["minedAt"]) + timedelta(seconds=self.RESOURCES_WAITING_TIME["stone"]),
             }
             for key, value in session_data['farm']['stones'].items()
         }
