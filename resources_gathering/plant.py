@@ -3,12 +3,13 @@ from datetime import timedelta
 
 import requests
 
+from api.services import send_data
 from settings.account_settings import account_settings
 from settings.resources_settings import resources_settings
 from utils.consts import (
     DEFAULT_HEADERS,
 )
-from utils.decorators import handle_gathering_errors
+from utils.decorators import handle_gathering_errors, wait_if_operation_performing
 from utils.schemas import ApiRouter
 from utils.utils import (
     generate_time_for_gathering_operation,
@@ -18,6 +19,7 @@ from utils.utils import (
 )
 
 
+@wait_if_operation_performing
 @handle_gathering_errors
 async def plant(
         name: str = None,
@@ -58,15 +60,14 @@ async def plant(
     }
 
     print(f'Starting planting {len(to_plant)}/{resources_settings.CROPS_AMOUNT[name]} {name}...')
-    for request_payload in split_payloads_by_created_at(payload):
-        response = requests.post(ApiRouter.AUTOSAVE, headers=DEFAULT_HEADERS(), json=request_payload)
-        print("Status code plant:", response.status_code)
-        response.raise_for_status()
+    # for request_payload in split_payloads_by_created_at(payload):
+    response = await send_data(payload)
+    print("Status code plant:", response.status_code)
 
-        # set them as unavailable
-        if response.status_code == 200:
-            for action in to_plant:
-                resources_settings.LAND_HOLES_AVAILABILITY[action["index"]] = False
+    # set them as unavailable
+    if response.status_code == 200:
+        for action in to_plant:
+            resources_settings.LAND_HOLES_AVAILABILITY[action["index"]] = False
 
     for plant_operation in to_plant:
         set_new_hole_last_planted_at(plant_operation["index"], plant_operation["createdAt"])

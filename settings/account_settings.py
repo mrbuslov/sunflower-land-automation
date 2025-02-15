@@ -24,10 +24,11 @@ class AccountSettings:
 
     _session_data: dict | None = None
 
-    def __init__(self, **kwargs):
+    def __init__(self):
         self.AUTH_TOKEN = os.getenv("AUTH_TOKEN")
         self.SHOULD_REFRESH_SESSION = os.getenv("SHOULD_REFRESH_SESSION", True)
         self._session_data = self.get_session_data()
+        self.is_operation_performing = False
 
     def get_session_data(self) -> dict:
         session_file = self.get_session_file()
@@ -43,12 +44,22 @@ class AccountSettings:
         return self._session_data
 
     def update_session_data(self):
+        from settings.resources_settings import resources_settings
+        self.is_operation_performing = True
         session_file = self.get_session_file()
         if session_file.exists():
             session_response = self._request_session()
             self._session_data = session_response
             session_file.write_text(json.dumps(session_response, indent=4), encoding="utf-8")
         self._init_variables()
+
+        # quick solution bc of circular import
+        observers_funcs = [
+            resources_settings.on_account_settings_update,
+        ]
+        for func in observers_funcs:
+            func()
+        self.is_operation_performing = False
 
     @staticmethod
     def generate_random_id_for_session():

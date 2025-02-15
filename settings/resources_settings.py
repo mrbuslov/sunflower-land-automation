@@ -2,12 +2,12 @@ import json
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Literal
-
 from settings.account_settings import AccountSettings
+
 from utils.plants_schemas import PLANTS_DATA
 
 
-class ResourcesSettings(AccountSettings):
+class ResourcesSettings:
     LAND_HOLES: list[str] = []
     TREES: list[str] = []
     STONES: list[str] = []
@@ -16,10 +16,10 @@ class ResourcesSettings(AccountSettings):
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        session_data = self.get_session_file_data()
-        self.OPERATIONS_CONFIG_DIR = Path("config")
-        self.OPERATIONS_CONFIG_FILE = self.OPERATIONS_CONFIG_DIR / "crops_operations.json"
-        self.OPERATIONS_INFO = self.get_holes_operations_data()
+        self.init_variables()
+
+    def init_variables(self):
+        session_data = AccountSettings.get_session_file_data()
 
         self.RESOURCES_WAITING_TIME = {
             "tree": 60 * 60 * 2,
@@ -31,12 +31,27 @@ class ResourcesSettings(AccountSettings):
             hole: not bool(session_data['farm']['crops'][hole].get('crop', False))
             for hole in self.LAND_HOLES
         }
+        self.LAND_HOLES_DATA = {
+            key: {
+                "planted_at": (
+                    self.from_timestamp(value.get('crop', {})["plantedAt"]) if value.get('crop', {}).get(
+                        'plantedAt') else None
+                ),
+                "next_planting_time": (
+                    self.from_timestamp(value.get('crop', {})["plantedAt"]) + timedelta(
+                        seconds=PLANTS_DATA[value.get('crop', {})['name'] + " Seed"]['plantSeconds'])
+                    if value.get('crop', {}).get('plantedAt') else datetime.now(timezone.utc)
+                ),
+            }
+            for key, value in session_data['farm']['crops'].items()
+        }
 
         self.TREES = list(session_data['farm']['trees'].keys())
         self.TREES_DATA: dict[str, dict[str, datetime]] = {
             key: {
                 "chopped_at": self.from_timestamp(value['wood']["choppedAt"]),
-                "next_chop_time": self.from_timestamp(value['wood']["choppedAt"]) + timedelta(seconds=self.RESOURCES_WAITING_TIME["tree"]),
+                "next_chop_time": self.from_timestamp(value['wood']["choppedAt"]) + timedelta(
+                    seconds=self.RESOURCES_WAITING_TIME["tree"]),
             }
             for key, value in session_data['farm']['trees'].items()
         }
@@ -45,7 +60,8 @@ class ResourcesSettings(AccountSettings):
         self.STONES_DATA: dict[str, dict[str, datetime]] = {
             key: {
                 "mined_at": self.from_timestamp(value['stone']["minedAt"]),
-                "next_mine_time": self.from_timestamp(value['stone']["minedAt"]) + timedelta(seconds=self.RESOURCES_WAITING_TIME["stone"]),
+                "next_mine_time": self.from_timestamp(value['stone']["minedAt"]) + timedelta(
+                    seconds=self.RESOURCES_WAITING_TIME["stone"]),
             }
             for key, value in session_data['farm']['stones'].items()
         }
@@ -70,6 +86,13 @@ class ResourcesSettings(AccountSettings):
                 else 0
             ),
         }
+
+        self.LAST_RESTOCKED_AT = self.from_timestamp(session_data['farm']['shipments']['restockedAt'])
+        self.NEXT_RESTOCK_TIME = self.LAST_RESTOCKED_AT + timedelta(hours=17)
+
+        self.OPERATIONS_CONFIG_DIR = Path("config")
+        self.OPERATIONS_CONFIG_FILE = self.OPERATIONS_CONFIG_DIR / "crops_operations.json"
+        self.OPERATIONS_INFO = self.get_holes_operations_data()
 
     def is_able_to_plant(self, amount: int) -> bool:
         """Check if there are enough land holes to plant"""
@@ -110,7 +133,7 @@ class ResourcesSettings(AccountSettings):
         elif hole_index in data:
             return data[hole_index]  # Return specific hole timestamp
         else:
-            raise ValueError(f"Hole '{hole_index}' is not in the LAND_HOLES list.")
+            raise ValueError(f"Hole '{hole_index}' is not in the LAND_HOLES list. (get_holes_operations_data)")
 
     def set_hole_operation_time(
             self,
@@ -121,13 +144,15 @@ class ResourcesSettings(AccountSettings):
         data = self._get_crops_operations()
         holes_data = self._get_crops_operations()['land_holes']
         if hole_index not in holes_data:
-            raise ValueError(f"Hole '{hole_index}' is not in the LAND_HOLES list.")
+            raise ValueError(f"Hole '{hole_index}' is not in the LAND_HOLES list. (set_hole_operation_time)")
 
         holes_data[hole_index] |= planting_data
         holes_data = {
             key: {
-                "planted_at": value['planted_at'].isoformat() if isinstance(value['planted_at'], datetime) else value['planted_at'],
-                "harvested_at": value['harvested_at'].isoformat() if isinstance(value['harvested_at'], datetime) else value['harvested_at']
+                "planted_at": value['planted_at'].isoformat() if isinstance(value['planted_at'], datetime) else value[
+                    'planted_at'],
+                "harvested_at": value['harvested_at'].isoformat() if isinstance(value['harvested_at'], datetime) else
+                value['harvested_at']
             }
             for key, value in holes_data.items()
         }
@@ -137,6 +162,9 @@ class ResourcesSettings(AccountSettings):
 
     def from_timestamp(self, timestamp: int) -> datetime:
         return datetime.fromtimestamp(timestamp / 1000, tz=timezone.utc)
+
+    def on_account_settings_update(self):
+        self.init_variables()
 
     def _set_holes_default_operation_data(self):
         """Creates or updates the JSON config file with the current timestamp."""
@@ -157,11 +185,16 @@ class ResourcesSettings(AccountSettings):
 
     def _get_crops_operations(self):
         if not self.OPERATIONS_CONFIG_FILE.exists():
+            print('No operations config file found. Creating one...')
             data = self._set_holes_default_operation_data()
         else:
             with open(self.OPERATIONS_CONFIG_FILE, "r", encoding="utf-8") as f:
                 data = json.load(f)
         return data
+
+    @property
+    def is_able_to_restock_shipment(self) -> bool:
+        return datetime.now(timezone.utc) >= self.NEXT_RESTOCK_TIME
 
 
 resources_settings = ResourcesSettings()

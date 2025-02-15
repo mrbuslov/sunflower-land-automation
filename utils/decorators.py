@@ -1,4 +1,6 @@
+import asyncio
 import functools
+import random
 
 import requests
 
@@ -24,4 +26,17 @@ def handle_gathering_errors(func):
                         return await func(*args, **kwargs)
                 except ValueError:
                     pass  # Response was not in JSON format
+
+    return wrapper
+
+
+def wait_if_operation_performing(func):
+    @functools.wraps(func)
+    async def wrapper(*args, **kwargs):
+        if account_settings.is_operation_performing:
+            seconds_to_wait = random.randint(1, 10)
+            print(f'Operation is already in progress. Waiting {seconds_to_wait} seconds...')
+            await asyncio.sleep(seconds_to_wait)
+        return await func(*args, **kwargs)
+
     return wrapper

@@ -1,4 +1,5 @@
 import argparse
+import asyncio
 import base64
 import json
 import random
@@ -84,7 +85,6 @@ def arg_parser_resources():
     return parser.parse_args()
 
 
-
 def divide_items_to_chunks(total: int, chunk: int) -> list[int]:
     result = [chunk] * (total // chunk)
     remainder = total % chunk
@@ -115,12 +115,16 @@ def calculate_planting_time(hole_id: str) -> datetime:
 
 def set_new_hole_last_harvested_at(hole_id: str, new_created_at: str):
     new_created_at_datetime = datetime.fromisoformat(new_created_at.rstrip("Z"))
+    if hole_id not in resources_settings.OPERATIONS_INFO:
+        resources_settings.OPERATIONS_INFO[hole_id] = {}
     resources_settings.OPERATIONS_INFO[hole_id]["harvested_at"] = new_created_at_datetime
     resources_settings.set_hole_operation_time(hole_id, {"harvested_at": new_created_at_datetime})
 
 
 def set_new_hole_last_planted_at(hole_id: str, new_created_at: str):
     new_created_at_datetime = datetime.fromisoformat(new_created_at.rstrip("Z"))
+    if hole_id not in resources_settings.OPERATIONS_INFO:
+        resources_settings.OPERATIONS_INFO[hole_id] = {}
     resources_settings.OPERATIONS_INFO[hole_id]["planted_at"] = new_created_at_datetime
     resources_settings.set_hole_operation_time(hole_id, {"planted_at": new_created_at_datetime})
 
@@ -149,3 +153,7 @@ def split_payloads_by_created_at(payload: dict[str, Any]) -> list[dict[str, Any]
 
     return split_payloads
 
+
+async def run_w_delay_wrapper(delay, coro):
+    await asyncio.sleep(delay)
+    return await coro

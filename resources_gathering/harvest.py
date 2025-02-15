@@ -1,14 +1,10 @@
 import asyncio
+from datetime import datetime, timezone
 
-import requests
-
+from api.services import send_data
 from settings.account_settings import account_settings
 from settings.resources_settings import resources_settings
-from utils.consts import (
-    DEFAULT_HEADERS,
-)
-from utils.decorators import handle_gathering_errors
-from utils.schemas import ApiRouter
+from utils.decorators import handle_gathering_errors, wait_if_operation_performing
 from utils.utils import (
     generate_time_for_gathering_operation,
     generate_cached_key, set_new_hole_last_harvested_at, arg_parser_harvest,
@@ -16,6 +12,7 @@ from utils.utils import (
 )
 
 
+@wait_if_operation_performing
 @handle_gathering_errors
 async def harvest(crop_name: str = None):
     """
@@ -34,6 +31,11 @@ async def harvest(crop_name: str = None):
         }
         for hole_index in resources_settings.LAND_HOLES
         if not resources_settings.LAND_HOLES_AVAILABILITY[hole_index]
+           and (
+                   resources_settings.LAND_HOLES_DATA.get(hole_index, {}).get("next_planting_time", None)
+                   and
+                   datetime.now(timezone.utc) >= resources_settings.LAND_HOLES_DATA[hole_index]["next_planting_time"]
+           )
     ]
     if not to_harvest:
         print('Nothing to harvest')
@@ -49,9 +51,8 @@ async def harvest(crop_name: str = None):
 
     print('Starting harvesting...')
     for request_payload in split_payloads_by_created_at(payload):
-        response = requests.post(ApiRouter.AUTOSAVE, headers=DEFAULT_HEADERS(), json=request_payload)
+        response = await send_data(request_payload)
         print("Status code harvest:", response.status_code)
-        response.raise_for_status()
 
         # set them as available
         if response.status_code == 200:
@@ -60,6 +61,7 @@ async def harvest(crop_name: str = None):
 
     for harvest_operation in to_harvest:
         set_new_hole_last_harvested_at(harvest_operation["index"], harvest_operation["createdAt"])
+        resources_settings.LAND_HOLES_DATA[harvest_operation["index"]]["next_planting_time"] = datetime.now(timezone.utc)
 
 
 if __name__ == "__main__":

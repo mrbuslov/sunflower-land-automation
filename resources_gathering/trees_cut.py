@@ -3,12 +3,13 @@ from datetime import datetime, timezone
 
 import requests
 
+from api.services import send_data
 from settings.account_settings import account_settings
 from settings.resources_settings import resources_settings
 from utils.consts import (
     DEFAULT_HEADERS,
 )
-from utils.decorators import handle_gathering_errors
+from utils.decorators import handle_gathering_errors, wait_if_operation_performing
 from utils.schemas import ApiRouter
 from utils.utils import (
     generate_time_for_gathering_operation,
@@ -16,6 +17,7 @@ from utils.utils import (
 )
 
 
+@wait_if_operation_performing
 @handle_gathering_errors
 async def trees_cut_down(
         amount: int = -1
@@ -51,9 +53,8 @@ async def trees_cut_down(
 
     print(f'Starting cutting {len(to_cut)}/{len(resources_settings.TREES_DATA)} trees...')
     for request_payload in split_payloads_by_created_at(payload):
-        response = requests.post(ApiRouter.AUTOSAVE, headers=DEFAULT_HEADERS(), json=request_payload)
+        response = await send_data(request_payload)
         print("Status code trees cut:", response.status_code)
-        response.raise_for_status()
 
         # update last cut time
         for action in to_cut:
