@@ -1,3 +1,8 @@
+# DISCLAIMER:
+My 2 accounts are banned for "bot activity", so I need contributors to look through Sunflower Land's official UI github repo and find additional requests that their front sends to back
+I DO NOT reccomend using it for now, bc 99% your account will be blocked. Need more work to be done
+To make contributions, please, create PR
+
 # How to run
 
 ## Create environment
